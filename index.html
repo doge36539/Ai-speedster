@@ -2,17 +2,125 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Drifter 3D</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Retro Drifter 3D</title>
+    <style>
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        #game-container { position: relative; border: 4px solid #444; }
+        canvas { display: block; background: #111; image-rendering: pixelated; width: 800px; height: 600px; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #ff00ff; font-family: 'Courier New', monospace; font-size: 1.2rem; pointer-events: none; z-index: 10; text-shadow: 2px 2px #000; }
+    </style>
 </head>
 <body>
+    <div id="ui">SPEED: <span id="speed">0</span><br>DIST: <span id="dist">0</span></div>
     <div id="game-container">
-        <div id="ui">
-            <div class="stat">SPEED: <span id="speed">0</span></div>
-            <div class="stat">DISTANCE: <span id="dist">0</span></div>
-        </div>
         <canvas id="g"></canvas>
-        <div class="overlay"></div> </div>
-    <script type="module" src="main.js"></script>
+    </div>
+
+<script>
+    const canvas = document.getElementById('g');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 800; canvas.height = 600;
+
+    // --- CONFIG ---
+    const roadW = 2000;
+    const segL = 200;
+    const camD = 0.8; 
+    const drawDistance = 100;
+
+    let position = 0;
+    let playerX = 0;
+    let speed = 0;
+    const keys = {};
+
+    // Generate Road
+    const segments = [];
+    for (let i = 0; i < 2000; i++) {
+        segments.push({
+            p1: { z: i * segL },
+            p2: { z: (i + 1) * segL },
+            curve: Math.sin(i / 20) * 1.8,
+            color: Math.floor(i / 3) % 2 ? '#333' : '#3a3a3a'
+        });
+    }
+
+    window.onkeydown = e => keys[e.key] = true;
+    window.onkeyup = e => keys[e.key] = false;
+
+    function project(p, camX, camY, camZ) {
+        // Perspective Math: avoid division by zero
+        const scale = camD / (p.z - camZ || 1); 
+        return {
+            x: (1 + scale * (p.x - camX)) * canvas.width / 2,
+            y: (1 - scale * (p.y - camY)) * canvas.height / 2,
+            w: scale * roadW * canvas.width / 2
+        };
+    }
+
+    function loop() {
+        // 1. Update Physics
+        if (keys['w'] || keys['ArrowUp']) speed += 2;
+        else speed *= 0.97;
+        
+        if (keys['a'] || keys['ArrowLeft']) playerX -= 0.04 * (speed/150);
+        if (keys['d'] || keys['ArrowRight']) playerX += 0.04 * (speed/150);
+
+        speed = Math.min(Math.max(speed, 0), 250);
+        position += speed;
+
+        // 2. Background (Sky & Grass)
+        ctx.fillStyle = '#10002b'; // Dark Purple Sky
+        ctx.fillRect(0, 0, canvas.width, canvas.height/2);
+        ctx.fillStyle = '#0a0a0a'; // Ground
+        ctx.fillRect(0, canvas.height/2, canvas.width, canvas.height/2);
+
+        // 3. Draw Road (Horizon to Car)
+        let startNode = Math.floor(position / segL);
+        let x = 0, dx = 0;
+
+        // We draw backwards from the horizon to the front for better "layering"
+        for (let n = startNode + drawDistance; n > startNode; n--) {
+            const s = segments[n % segments.length];
+            
+            // Calculate perspective
+            // We use a "cumulative curve" (x and dx) to make the road bend
+            const p1 = project({x: playerX * roadW - x, y: 1500, z: s.p1.z}, 0, 0, position);
+            const p2 = project({x: playerX * roadW - x - dx, y: 1500, z: s.p2.z}, 0, 0, position);
+            
+            x += dx;
+            dx += s.curve;
+
+            // Don't draw if behind camera
+            if (p1.y <= p2.y) continue;
+
+            // Road Mesh
+            ctx.fillStyle = s.color;
+            ctx.beginPath();
+            ctx.moveTo(p1.x - p1.w, p1.y);
+            ctx.lineTo(p1.x + p1.w, p1.y);
+            ctx.lineTo(p2.x + p2.w, p2.y);
+            ctx.lineTo(p2.x - p2.w, p2.y);
+            ctx.fill();
+            
+            // Shoulder/Edge lines
+            ctx.fillStyle = '#ff00ff';
+            ctx.fillRect(p1.x - p1.w - (p1.w * 0.1), p1.y, p1.w * 0.1, p1.y - p2.y || 1);
+            ctx.fillRect(p1.x + p1.w, p1.y, p1.w * 0.1, p1.y - p2.y || 1);
+        }
+
+        // 4. Player Car
+        ctx.fillStyle = '#00ffff'; // Neon Blue Car
+        ctx.fillRect(360, 500, 80, 25);
+        ctx.fillStyle = '#fff'; // Taillights
+        ctx.fillRect(365, 505, 10, 5);
+        ctx.fillRect(425, 505, 10, 5);
+
+        document.getElementById('speed').innerText = Math.floor(speed);
+        document.getElementById('dist').innerText = Math.floor(position / 100);
+
+        requestAnimationFrame(loop);
+    }
+    
+    loop(); // Start immediately
+</script>
 </body>
 </html>
