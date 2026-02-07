@@ -2,111 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Pixel Drifter</title>
-    <style>
-        body { margin: 0; background: #222; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Courier New', Courier, monospace; }
-        canvas { background: #333; border: 4px solid #555; image-rendering: pixelated; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #0f0; text-shadow: 2px 2px #000; pointer-events: none; }
-    </style>
+    <title>Pixel Drifter 3D</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="ui">SCORE: <span id="score">0</span></div>
-    <canvas id="gameCanvas"></canvas>
-
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const scoreElement = document.getElementById('score');
-
-    canvas.width = 800;
-    canvas.height = 600;
-
-    const car = {
-        x: 400, y: 300,
-        width: 20, height: 40,
-        angle: 0,
-        speed: 0,
-        maxSpeed: 5,
-        accel: 0.2,
-        friction: 0.98,
-        drift: 0.1, // This controls the "slide"
-        turnSpeed: 0.06,
-        color: '#ff3e3e'
-    };
-
-    const keys = {};
-    let score = 0;
-
-    window.addEventListener('keydown', e => keys[e.key] = true);
-    window.addEventListener('keyup', e => keys[e.key] = false);
-
-    function update() {
-        // Acceleration
-        if (keys['ArrowUp'] || keys['w']) car.speed += car.accel;
-        if (keys['ArrowDown'] || keys['s']) car.speed -= car.accel;
-
-        // Turning
-        if (Math.abs(car.speed) > 0.1) {
-            const direction = car.speed > 0 ? 1 : -1;
-            if (keys['ArrowLeft'] || keys['a']) car.angle -= car.turnSpeed * direction;
-            if (keys['ArrowRight'] || keys['d']) car.angle += car.turnSpeed * direction;
-        }
-
-        // Apply Physics
-        car.speed *= car.friction;
-        car.x += Math.cos(car.angle) * car.speed;
-        car.y += Math.sin(car.angle) * car.speed;
-
-        // Screen Wrap (World Loop)
-        if (car.x > canvas.width) car.x = 0;
-        if (car.x < 0) car.x = canvas.width;
-        if (car.y > canvas.height) car.y = 0;
-        if (car.y < 0) car.y = canvas.height;
-
-        // Score logic (Gain points while moving/drifting)
-        if (Math.abs(car.speed) > 2) {
-            score++;
-            scoreElement.innerText = Math.floor(score / 10);
-        }
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Draw Grid (Retro look)
-        ctx.strokeStyle = '#444';
-        ctx.lineWidth = 1;
-        for(let i=0; i<canvas.width; i+=40) {
-            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-        }
-        for(let i=0; i<canvas.height; i+=40) {
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-        }
-
-        // Draw Car
-        ctx.save();
-        ctx.translate(car.x, car.y);
-        ctx.rotate(car.angle);
-        
-        // Pixel Car Body
-        ctx.fillStyle = car.color;
-        ctx.fillRect(-car.height/2, -car.width/2, car.height, car.width);
-        
-        // Windshield (Front)
-        ctx.fillStyle = '#88ccff';
-        ctx.fillRect(car.height/4, -car.width/2 + 2, 5, car.width - 4);
-        
-        ctx.restore();
-    }
-
-    function loop() {
-        update();
-        draw();
-        requestAnimationFrame(loop);
-    }
-
-    loop();
-</script>
+    <div id="game-container">
+        <div id="ui">
+            <div class="stat">SPEED: <span id="speed">0</span></div>
+            <div class="stat">DISTANCE: <span id="dist">0</span></div>
+        </div>
+        <canvas id="g"></canvas>
+        <div class="overlay"></div> </div>
+    <script type="module" src="main.js"></script>
 </body>
 </html>
